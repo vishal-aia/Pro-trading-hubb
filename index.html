@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Trading Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .active-tab { border-bottom: 2px solid #10b981; color: #10b981; }
+        .hidden-section { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Navbar with Tabs -->
+    <nav class="fixed top-0 w-full bg-slate-900 border-b border-gray-700 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <h1 class="text-2xl font-bold text-green-400">Trade<span class="text-white">Master</span></h1>
+                
+                <!-- Desktop Tabs -->
+                <div class="flex space-x-8 text-sm font-bold uppercase tracking-wide">
+                    <button onclick="switchView('courses')" id="btn-courses" class="nav-btn active-tab py-5 hover:text-green-400 transition">Video Courses</button>
+                    <button onclick="switchView('news')" id="btn-news" class="nav-btn py-5 hover:text-green-400 transition">Market News</button>
+                    <button onclick="switchView('tools')" id="btn-tools" class="nav-btn py-5 hover:text-green-400 transition">Tools</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="container mx-auto px-4 pt-24 pb-10">
+
+        <!-- SECTION 1: Video Courses -->
+        <div id="view-courses" class="section-view">
+            <h2 class="text-3xl font-bold mb-6 text-green-400 border-l-4 border-white pl-3">Premium Trading Courses</h2>
+            <div id="list-courses" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <p class="text-gray-500 animate-pulse">Loading videos...</p>
+            </div>
+        </div>
+
+        <!-- SECTION 2: News -->
+        <div id="view-news" class="section-view hidden-section">
+            <h2 class="text-3xl font-bold mb-6 text-blue-400 border-l-4 border-white pl-3">Latest Market News</h2>
+            <div id="list-news" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <p class="text-gray-500 animate-pulse">Loading news...</p>
+            </div>
+        </div>
+
+        <!-- SECTION 3: Tools -->
+        <div id="view-tools" class="section-view hidden-section">
+            <h2 class="text-3xl font-bold mb-6 text-yellow-400 border-l-4 border-white pl-3">Trading Tools</h2>
+            <div id="list-tools" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <p class="text-gray-500 animate-pulse">Loading tools...</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Tab Switching Logic (Non-Firebase)
+        function switchView(viewName) {
+            // Hide all sections
+            document.querySelectorAll('.section-view').forEach(el => el.classList.add('hidden-section'));
+            // Remove active class from buttons
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active-tab', 'text-green-400'));
+            
+            // Show selected section
+            document.getElementById(`view-${viewName}`).classList.remove('hidden-section');
+            // Highlight selected button
+            document.getElementById(`btn-${viewName}`).classList.add('active-tab');
+        }
+    </script>
+
+    <!-- FIREBASE LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+        // 🔥 APNA FIREBASE CONFIG YAHAN DALEIN 🔥
+        const firebaseConfig = {
+  apiKey: "AIzaSyDid938gjPC-gbDLBQQk1T0jBwYyRJ8nY8",
+  authDomain: "guru-trading.firebaseapp.com",
+  databaseURL: "https://guru-trading-default-rtdb.firebaseio.com",
+  projectId: "guru-trading",
+  storageBucket: "guru-trading.firebasestorage.app",
+  messagingSenderId: "329577116789",
+  appId: "1:329577116789:web:59b61e10cd74f6e73bb43c"
+};
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Helper to extract YouTube ID
+        function getYouTubeID(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        // Data Fetching Function
+        function loadData(collectionName, elementId, type) {
+            const q = query(collection(db, collectionName), orderBy("timestamp", "desc"));
+            
+            onSnapshot(q, (snapshot) => {
+                const container = document.getElementById(elementId);
+                container.innerHTML = '';
+
+                if (snapshot.empty) {
+                    container.innerHTML = '<p class="text-gray-500">No content available yet.</p>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    let html = '';
+
+                    if (type === 'course') {
+                        const videoID = getYouTubeID(data.url);
+                        if (videoID) {
+                            html = `
+                            <div class="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-gray-700">
+                                <iframe class="w-full h-52" src="https://www.youtube.com/embed/${videoID}" frameborder="0" allowfullscreen></iframe>
+                                <div class="p-4">
+                                    <h3 class="text-lg font-bold text-white mb-2">${data.title}</h3>
+                                    <p class="text-gray-400 text-sm">${data.desc || ''}</p>
+                                </div>
+                            </div>`;
+                        }
+                    } else if (type === 'news') {
+                        html = `
+                        <div class="bg-slate-800 p-6 rounded-xl border border-gray-700 hover:border-blue-500 transition">
+                            <div class="flex items-center mb-2">
+                                <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded">NEWS</span>
+                                <span class="text-gray-400 text-xs ml-2">${new Date(data.timestamp).toLocaleDateString()}</span>
+                            </div>
+                            <h3 class="text-xl font-bold text-white mb-2">${data.title}</h3>
+                            <p class="text-gray-300 text-sm leading-relaxed">${data.desc}</p>
+                        </div>`;
+                    } else if (type === 'tool') {
+                        html = `
+                        <a href="${data.url}" target="_blank" class="block bg-slate-800 p-6 rounded-xl border border-gray-700 hover:bg-slate-700 transition text-center group">
+                            <i class="fas fa-hammer text-3xl text-yellow-500 mb-3 group-hover:scale-110 transition inline-block"></i>
+                            <h3 class="text-lg font-bold text-white">${data.title}</h3>
+                            <p class="text-green-400 text-xs mt-1">Open Tool &rarr;</p>
+                        </a>`;
+                    }
+                    container.innerHTML += html;
+                });
+            });
+        }
+
+        // Initialize
+        loadData('courses', 'list-courses', 'course');
+        loadData('news', 'list-news', 'news');
+        loadData('tools', 'list-tools', 'tool');
+
+    </script>
+</body>
+</html>
