@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://vishal-aia.github.io/sitemap.xml
+
+Sitemap: https://vishal-aia.github.io/Pro-trading-hubb/sitemap.xml
